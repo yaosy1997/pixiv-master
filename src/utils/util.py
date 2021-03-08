@@ -2,9 +2,12 @@ import requests
 import threading
 import time
 from utils.ippool import test_ip
+import os
+from utils.logger import Logger
 
+logger = Logger("hmk").get_log()
 
-def download_picture(url, pid, suffix="jpg", path="..\\picture\\"):
+def download_picture(url, pid, path, suffix="jpg"):
     """
     图片下载器
     :param path: 保存文件夹路径
@@ -16,16 +19,20 @@ def download_picture(url, pid, suffix="jpg", path="..\\picture\\"):
     name = str(pid) + '.' + suffix
     header = {'Referer': 'https://www.pixiv.net/'}
     req = requests.get(url, headers=header, stream=True)
+    if not os.path.exists(path):
+        os.mkdir(path)
     if req.status_code == 200:
         open(path + name, 'wb').write(req.content)  # 将内容写入图片
+        print(name + "下载完成")
     else:
         print(name + "下载失败")
     del req
 
 
-def download(picture):
+def download(picture, path="..\\..\\picture\\"):
     """
     下载图片
+    :param path: 图片路径
     :param picture: 图片列表
     :return:
     """
@@ -33,7 +40,7 @@ def download(picture):
     while len(picture) > 0:
         image_data = picture.pop()
         image = image_data.get_info()
-        download_picture(image['url'][0], image['pid'])
+        download_picture(image['url'][0], image['pid'], path)
         _count += 1
     print(threading.current_thread().getName() +
           "下载完成，共下载图片" + str(_count) + "张")
@@ -107,7 +114,6 @@ def get_ip():
             break
 
 
-
 def request(headers, cookie, url, use_proxy):
     """
     封装请求函数
@@ -117,13 +123,22 @@ def request(headers, cookie, url, use_proxy):
     :param use_proxy:是否用代理IP
     :return:
     """
-    if not use_proxy:
-        req = requests.get(url, headers=headers, cookies=cookie).text
-    else:
-        ip = get_ip()
-        proxies = {
-            'http': 'http://' + ip,
-            # 'https': 'https://' + proxy
-        }
-        req = requests.get(url, headers=headers, cookies=cookie, proxies=proxies).text
-    return req
+    try:
+        if not use_proxy:
+            req = requests.get(url, headers=headers, cookies=cookie).text
+        else:
+            ip = get_ip()
+            proxies = {
+                'http': 'http://' + ip,
+                # 'https': 'https://' + proxy
+            }
+            req = requests.get(url, headers=headers, cookies=cookie, proxies=proxies).text
+        return req
+    except:
+        logger.info("网络错误")
+
+
+if __name__ == '__main__':
+    path = "..\\..\\picture\\20210306"
+    if not os.path.exists(path):
+        os.mkdir(path)
